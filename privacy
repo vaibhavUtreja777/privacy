@@ -1,0 +1,537 @@
+\\ /1_To_perform_Encrypt_and_Decrypt_using_CaesarCipher.py
+
+def encypt_func(txt, s):  
+    result = ""  
+  
+  
+# transverse the plain txt  
+    for i in range(len(txt)):  
+        char = txt[i]  
+        # encypt_func uppercase characters in plain txt  
+  
+        if (char.isupper()):  
+            result += chr((ord(char) + s - 64) % 26 + 65)  
+        # encypt_func lowercase characters in plain txt  
+        else:  
+            result += chr((ord(char) + s - 96) % 26 + 97)  
+    return result  
+# check the above function  
+txt = "TUSHARDIXIT"  
+s = 4  
+  
+print("Plain txt : " + txt)  
+print("Shift pattern : " + str(s))  
+print("Cipher: " + encypt_func(txt, s))  
+
+\\ /2_To_Perform_Encrypt_and_Decrypt_using_RailFencerCipher.py
+
+# Function to encrypt the plaintext using Rail Fence Cipher
+def encryptRailFence(text, key):
+    # Create a 2D list to store the characters in the zigzag pattern
+    rail = [['\n' for i in range(len(text))] for j in range(key)]
+    
+    # Determine the direction and place the characters in the zigzag pattern
+    dir_down = False
+    row, col = 0, 0
+    
+    for i in range(len(text)):
+        # Check if the direction needs to be changed (top or bottom rail reached)
+        if row == 0 or row == key - 1:
+            dir_down = not dir_down
+        
+        # Place the character in the matrix
+        rail[row][col] = text[i]
+        col += 1
+        
+        # Move in the appropriate direction
+        row += 1 if dir_down else -1
+    
+    # Read the characters row-wise to get the ciphertext
+    result = []
+    for i in range(key):
+        for j in range(len(text)):
+            if rail[i][j] != '\n':
+                result.append(rail[i][j])
+    
+    return "".join(result)
+
+# Function to decrypt the ciphertext using Rail Fence Cipher
+def decryptRailFence(cipher, key):
+    # Create a 2D list to mark the positions in the zigzag pattern
+    rail = [['\n' for i in range(len(cipher))] for j in range(key)]
+    
+    dir_down = None
+    row, col = 0, 0
+    
+    # Mark the positions in the rail matrix
+    for i in range(len(cipher)):
+        if row == 0:
+            dir_down = True
+        if row == key - 1:
+            dir_down = False
+        
+        # Place a marker to indicate where characters would have been placed
+        rail[row][col] = '*'
+        col += 1
+        
+        # Move in the appropriate direction
+        row += 1 if dir_down else -1
+    
+    # Now fill the markers with the ciphertext characters
+    index = 0
+    for i in range(key):
+        for j in range(len(cipher)):
+            if rail[i][j] == '*' and index < len(cipher):
+                rail[i][j] = cipher[index]
+                index += 1
+    
+    # Read the characters in a zigzag pattern to retrieve the plaintext
+    result = []
+    row, col = 0, 0
+    for i in range(len(cipher)):
+        if row == 0:
+            dir_down = True
+        if row == key - 1:
+            dir_down = False
+        
+        # Read characters as per the zigzag movement
+        if rail[row][col] != '\n':
+            result.append(rail[row][col])
+            col += 1
+        
+        row += 1 if dir_down else -1
+    
+    return "".join(result)
+
+# Main function to test the Rail Fence Cipher
+if __name__ == "__main__":
+    text = input("Enter the text to encrypt: ")
+    key = int(input("Enter the key (number of rails): "))
+
+    # Encrypt the text
+    cipher = encryptRailFence(text, key)
+    print("Encrypted text:", cipher)
+
+    # Decrypt the text
+    decrypted_text = decryptRailFence(cipher, key)
+    print("Decrypted text:", decrypted_text)
+
+
+\\ /3_Takes_password_as_InputValue_and_returns_its_SHA-256_hashed_represent_hexadecimalString.py
+
+import hashlib
+
+# Function to hash the input password using SHA-256
+def hash_password(password):
+    # Convert the password to a bytes-like object and hash it using SHA-256
+    sha_signature = hashlib.sha256(password.encode()).hexdigest()
+    return sha_signature
+
+# Main function to get user input and display the hashed password
+if __name__ == "__main__":
+    # Input the password from the user
+    password = input("Enter the password to hash: ")
+    
+    # Hash the password and print the SHA-256 representation
+    hashed_password = hash_password(password)
+    print(f"SHA-256 Hashed Password: {hashed_password}")
+
+
+\\ /4_Reads_file_containing_usernameANDpasswords_to_check_it_is_leaked_in_dataBreach.py
+# IF A PASSWORD HAS BEEN LEAKED.
+import hashlib
+import requests
+
+# Function to get the SHA-1 hash of a password
+def get_sha1_hash(password):
+    sha1 = hashlib.sha1(password.encode('utf-8')).hexdigest().upper()
+    return sha1
+
+# Function to check if a password has been leaked using HIBP API
+def check_password_pwned(password):
+    sha1_hash = get_sha1_hash(password)
+    prefix = sha1_hash[:5]
+    suffix = sha1_hash[5:]
+
+    # API URL for k-Anonymity model
+    url = f"https://api.pwnedpasswords.com/range/{prefix}"
+
+    # Query the HIBP API
+    response = requests.get(url)
+
+    if response.status_code != 200:
+        raise RuntimeError(f"Error fetching data: {response.status_code}")
+
+    # Check if the suffix of the hash is in the returned list
+    hashes = (line.split(':') for line in response.text.splitlines())
+    for h, count in hashes:
+        if h == suffix:
+            return int(count)  # Password found with the number of times pwned
+
+    return 0  # Password not found
+
+# Function to process the file and check each password
+def check_passwords_from_file(filename):
+    try:
+        with open(filename, 'r') as file:
+            for line in file:
+                username, password = line.strip().split(',')
+                pwned_count = check_password_pwned(password)
+                if pwned_count > 0:
+                    print(f"WARNING: The password for '{username}' has been found {pwned_count} times in data breaches.")
+                else:
+                    print(f"The password for '{username}' is safe (not found in any breaches).")
+    except FileNotFoundError:
+        print(f"File '{filename}' not found.")
+    except Exception as e:
+        print(f"An error occurred: {str(e)}")
+
+# Main function
+if __name__ == "__main__":
+    filename = input("Enter the file name containing usernames and passwords: ")
+    check_passwords_from_file(filename)
+
+  \\ /5_Generates_password_using_a_random_combination_of_words_from_a_dictionaryFile.py
+import random
+import string # ForEnhancement
+
+# Function to read words from a dictionary file
+def read_dictionary(filename):
+    try:
+        with open(filename, 'r') as file:
+            words = [line.strip() for line in file if line.strip()]
+        return words
+    except FileNotFoundError:
+        print(f"File '{filename}' not found.")
+        return []
+
+# Function to generate a password using random words with added numbers and capital letters
+def generate_secure_password(words, num_words=4):
+    if len(words) < num_words:
+        raise ValueError("Not enough words in the dictionary to generate the password.")
+    
+    # Randomly select words from the dictionary
+    selected_words = random.sample(words, num_words)
+    
+    # Capitalize the first letter of each word
+    selected_words = [word.capitalize() for word in selected_words]
+    
+    # Combine the words into a single string
+    password = ''.join(selected_words)
+    
+    # Optionally, add a random number and special character
+    # password += str(random.randint(0, 99))  # Add a random number (FOR ENHANCEMENT)
+    # password += random.choice(string.punctuation)  # Add a random special character  (FOR ENHANCEMENT)
+    
+    return password
+
+# Main function
+if __name__ == "__main__":
+    # Input dictionary file from the user
+    dictionary_file = input("Enter the dictionary file path: ")
+    
+    # Read the words from the file
+    words_list = read_dictionary(dictionary_file)
+    
+    if words_list:
+        # Get the number of words to use for the password
+        num_words = int(input("Enter the number of words to use in the password: "))
+        
+        # Generate and display the secure password
+        secure_password = generate_secure_password(words_list, num_words)
+        print(f"Generated Secure Password: {secure_password}")
+
+\\  /6_Stimulates_Brute-force_attack_on_a_password_by_tryingout_allPossible_CharacterCombinations.py
+
+
+import itertools
+import time
+import string
+
+# Function to perform the brute-force attack
+def brute_force_attack(password_length, charset, target_password):
+    # Start a timer to measure how long the attack takes
+    start_time = time.time()
+    
+    # Generate combinations of characters of the specified length
+    for attempt in itertools.product(charset, repeat=password_length):
+        guess = ''.join(attempt)  # Convert tuple to string
+        
+        # Check if the generated guess matches the target password
+        if guess == target_password:
+            end_time = time.time()
+            print(f"Password found: {guess}")
+            print(f"Brute-force attack took {end_time - start_time:.2f} seconds.")
+            return guess  # Return the password when found
+    
+    # If the loop finishes, no match is found
+    print("Password not found.")
+    return None
+
+# Main function to get user input
+def main():
+    # Ask the user for the target password
+    target_password = input("Enter the target password to brute-force: ")
+
+    # Ensure the target password is not empty
+    if not target_password:
+        print("Password cannot be empty!")
+        return
+    
+    # Ask the user for the password length to brute-force
+    password_length = int(input(f"Enter the length of the password to crack (must be {len(target_password)}): "))
+    
+    # Ensure that the specified length is valid
+    if password_length != len(target_password):
+        print(f"Invalid length! Please provide the exact length of the target password ({len(target_password)}).")
+        return
+    
+    # Define the character set to be used in the brute-force attack
+    # This includes lowercase, uppercase, digits, and some common special characters
+    charset = string.ascii_lowercase + string.ascii_uppercase + string.digits + string.punctuation
+    
+    # Run the brute-force attack with the user-provided password length
+    brute_force_attack(password_length, charset, target_password)
+
+# Run the program
+if __name__ == "__main__":
+    main()
+
+
+ \\ /7_Demonstrate_the_usageORsending_of_a_digitally_signed_document.py
+document = "This is a sample document that needs to be signed digitally."
+
+from cryptography.hazmat.primitives.asymmetric import rsa, padding
+from cryptography.hazmat.primitives import hashes, serialization
+
+# Step 2.1: Generate RSA private and public key pair (sender's keys)
+private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
+public_key = private_key.public_key()
+
+# Step 2.2: Sign the document with the private key
+document_bytes = document.encode('utf-8')
+signature = private_key.sign(
+    document_bytes,
+    padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH),
+    hashes.SHA256()
+)
+
+print("Digital Signature (base64-encoded):", signature.hex())
+
+# Step 4.1: Verify the signature with the public key
+from cryptography.exceptions import InvalidSignature
+
+try:
+    public_key.verify(
+        signature,
+        document_bytes,
+        padding.PSS(mgf=padding.MGF1(hashes.SHA256()), salt_length=padding.PSS.MAX_LENGTH),
+        hashes.SHA256()
+    )
+    print("The signature is valid. The document is authentic and unaltered.")
+except InvalidSignature:
+    print("The signature is invalid. The document may have been altered or the signature is not from the expected sender.")
+
+
+  \\ \/8_DataPrivacy_audit_of_an_organization_to_identify_potential_vulnerabilitiesANDrisks_in_dataPrivacyPractices.py
+
+import datetime
+
+class DataPrivacyAudit:
+    def __init__(self, organization_name):
+        self.organization_name = organization_name
+        self.audit_date = datetime.datetime.now().strftime("%Y-%m-%d")
+        self.responses = {}
+
+    def ask_question(self, category, question):
+        print(f"\n{category} - {question}")
+        response = input("Enter your response (Yes/No/Partial/NA): ").strip().lower()
+        comments = input("Additional comments (optional): ")
+        self.responses[question] = {"response": response, "comments": comments}
+
+    def conduct_audit(self):
+        print(f"\nStarting Data Privacy Audit for {self.organization_name}")
+        print(f"Audit Date: {self.audit_date}")
+
+        # 1. Data Collection Practices
+        self.ask_question("Data Collection", "Does the organization collect only necessary data?")
+        self.ask_question("Data Collection", "Are individuals informed about the data being collected?")
+        self.ask_question("Data Collection", "Is sensitive data handled with extra protection measures?")
+
+        # 2. Data Storage and Security
+        self.ask_question("Data Storage", "Is personal data stored securely with encryption?")
+        self.ask_question("Data Storage", "Are access controls in place to limit data access to authorized personnel?")
+        self.ask_question("Data Storage", "Are data retention policies clearly defined and followed?")
+
+        # 3. Data Usage and Sharing
+        self.ask_question("Data Usage", "Is data usage limited to the stated purposes in the privacy policy?")
+        self.ask_question("Data Usage", "Is personal data shared only with consent or legitimate reason?")
+
+        # 4. Data Subject Rights
+        self.ask_question("Data Subject Rights", "Does the organization have a process for data access requests?")
+        self.ask_question("Data Subject Rights", "Is there a mechanism to update or delete personal data upon request?")
+
+        # 5. Incident Response and Breach Notification
+        self.ask_question("Incident Response", "Is there a protocol in place for data breach response?")
+        self.ask_question("Incident Response", "Are affected individuals notified promptly in case of a data breach?")
+
+        # 6. Third-Party Management
+        self.ask_question("Third-Party Management", "Are third-party data processors vetted for data privacy compliance?")
+        self.ask_question("Third-Party Management", "Are data-sharing agreements in place with all vendors handling personal data?")
+
+        # 7. Employee Training and Awareness
+        self.ask_question("Employee Training", "Do employees receive regular data privacy and security training?")
+        self.ask_question("Employee Training", "Are employees educated on data privacy laws and best practices?")
+
+        print("\nAudit Complete. Generating Report...")
+
+    def generate_report(self):
+        print(f"\nData Privacy Audit Report for {self.organization_name}")
+        print(f"Audit Date: {self.audit_date}\n")
+
+        for question, response in self.responses.items():
+            print(f"Question: {question}")
+            print(f"Response: {response['response'].capitalize()}")
+            if response["comments"]:
+                print(f"Comments: {response['comments']}")
+            print("\n" + "-" * 50)
+
+# Example Usage
+organization_name = input("Enter the organization's name for the audit: ")
+audit = DataPrivacyAudit(organization_name)
+audit.conduct_audit()
+audit.generate_report()
+
+\\/9_Explore_requirements_of_the_DataProtectionRegulations_and_develop_a_plan_for_ensuring_compliance_with_regulation.py
+import datetime
+
+class DataProtectionCompliancePlan:
+    def __init__(self, organization_name):
+        self.organization_name = organization_name
+        self.assessment_date = datetime.datetime.now().strftime("%Y-%m-%d")
+        self.compliance_plan = {}
+
+    def add_requirement(self, requirement, description):
+        print(f"\nRequirement: {requirement}")
+        print(f"Description: {description}")
+        status = input("Is this requirement currently being met? (Yes/No/Partial): ").strip().lower()
+        
+        if status in ("no", "partial"):
+            action_items = input("Enter actions needed to ensure compliance (e.g., update policy, implement training): ").strip()
+        else:
+            action_items = "No additional actions needed"
+
+        self.compliance_plan[requirement] = {
+            "status": status.capitalize(),
+            "action_items": action_items
+        }
+
+    def conduct_assessment(self):
+        print(f"\nStarting Compliance Assessment for {self.organization_name} on {self.assessment_date}\n")
+
+        # List of common data protection requirements
+        requirements = [
+            ("Data Collection Consent", "Collect and process personal data only with explicit consent."),
+            ("Purpose Limitation", "Data should be collected for specified, legitimate purposes only."),
+            ("Data Minimization", "Only collect and process data that is strictly necessary."),
+            ("Accuracy", "Ensure personal data is accurate and regularly updated."),
+            ("Storage Limitation", "Do not store personal data for longer than necessary."),
+            ("Data Security", "Protect personal data against unauthorized or unlawful processing, loss, or damage."),
+            ("Data Subject Rights", "Provide individuals with rights to access, correct, and delete their data."),
+            ("Breach Notification", "Notify authorities and affected individuals in the event of a data breach."),
+            ("Third-Party Compliance", "Ensure third-party partners comply with data protection standards."),
+            ("Employee Training", "Provide regular training on data privacy and protection policies.")
+        ]
+
+        # Iterate through each requirement, gathering responses and actions
+        for req, desc in requirements:
+            self.add_requirement(req, desc)
+
+        print("\nAssessment Complete. Generating Compliance Plan...\n")
+
+    def generate_compliance_plan(self):
+        print(f"\nCompliance Plan for {self.organization_name}")
+        print(f"Assessment Date: {self.assessment_date}")
+        print("=" * 50)
+        for req, details in self.compliance_plan.items():
+            print(f"Requirement: {req}")
+            print(f"Current Status: {details['status']}")
+            print(f"Actions Needed: {details['action_items']}")
+            print("-" * 50)
+
+# Example Usage
+organization_name = input("Enter the organization's name for the compliance assessment: ")
+compliance_assessment = DataProtectionCompliancePlan(organization_name)
+compliance_assessment.conduct_assessment()
+compliance_assessment.generate_compliance_plan()
+\\\/10_Ethical_considerations_in_D.P._as_balance_btw_PrivacyANDSecurity_impact_of_dataCollection_and_analysis_on_communitiesAND_the_role_of_dataEthics_in_TechnoDevo.py
+class DataPrivacyEthicsExploration:
+    def __init__(self, student_name):
+        self.student_name = student_name
+        self.responses = {}
+
+    def add_ethics_question(self, question):
+        print(f"\nQuestion: {question}")
+        response = input("Enter your thoughts and reflections on this topic: ").strip()
+        self.responses[question] = response
+
+    def conduct_ethics_exploration(self):
+        print(f"\nStarting Ethical Considerations Exploration for {self.student_name}\n")
+        
+        # 1. Privacy vs. Security Balance
+        self.add_ethics_question(
+            "How should organizations balance the need for data privacy with the need for security? "
+            "Consider cases where enhanced security might require more data collection or surveillance."
+        )
+
+        # 2. Impact on Marginalized Communities
+        self.add_ethics_question(
+            "How does data collection and analysis affect marginalized communities? "
+            "Reflect on whether certain data practices might perpetuate bias or discrimination."
+        )
+
+        # 3. Informed Consent and Transparency
+        self.add_ethics_question(
+            "What role does informed consent play in data collection? "
+            "Is it sufficient for ethical data collection, or should organizations do more to ensure individuals understand how their data is used?"
+        )
+
+        # 4. Data Minimization Principle
+        self.add_ethics_question(
+            "What are your thoughts on data minimization (collecting only the data necessary)? "
+            "How does this principle support both ethical and privacy-focused practices?"
+        )
+
+        # 5. Data Ethics in AI and Machine Learning
+        self.add_ethics_question(
+            "How should data ethics be applied to the development of AI and machine learning models? "
+            "Consider the implications of biased data sets and potential impacts on society."
+        )
+
+        # 6. Accountability and Transparency
+        self.add_ethics_question(
+            "What responsibility do organizations have to be transparent about their data practices? "
+            "How might a lack of transparency affect public trust?"
+        )
+
+        # 7. Long-term Impact of Data Collection
+        self.add_ethics_question(
+            "What are the long-term ethical considerations of mass data collection? "
+            "Consider future implications, such as government surveillance or corporate data monopolies."
+        )
+
+        print("\nEthical Exploration Complete. Generating Summary...\n")
+
+    def generate_summary(self):
+        print(f"\nEthics Exploration Summary for {self.student_name}")
+        print("=" * 50)
+        for question, response in self.responses.items():
+            print(f"Question: {question}")
+            print(f"Reflection: {response}")
+            print("-" * 50)
+
+# Example Usage
+student_name = input("Enter your name: ")
+ethics_exploration = DataPrivacyEthicsExploration(student_name)
+ethics_exploration.conduct_ethics_exploration()
+ethics_exploration.generate_summary()
